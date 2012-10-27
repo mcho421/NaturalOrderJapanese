@@ -5,7 +5,8 @@ Tool for searching for Japanese example sentences and ordering them for efficien
 ## Installing
 
 ### Dependencies
-*PyQt
+* PyQt
+* libanki
 
 TODO
 
