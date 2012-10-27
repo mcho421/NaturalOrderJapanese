@@ -5,3 +5,7 @@ Tool for searching for Japanese example sentences and ordering them for efficien
 ## Installing
 
 TODO
+
+## Usage
+
+TODO
