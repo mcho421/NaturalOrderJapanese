@@ -6,7 +6,7 @@ Tool for searching for Japanese example sentences and ordering them for efficien
 
 ### Dependencies
 * PyQt
-* libanki
+* [libanki](https://github.com/dae/libanki)
 
 TODO
 
