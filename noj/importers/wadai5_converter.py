@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import string
+import json
+import pprint
 from pyparsing import *
 from textwrap import dedent
 import pdb
-import pprint
 
 class UniPrinter(pprint.PrettyPrinter):
     """Pretty print lists and dicts containing unicode properly."""
@@ -59,8 +59,9 @@ context_block.setParseAction(lambda t : t[0])
 kanji_and_context_block = OneOrMore(context_block('context') | 
                           kanji_block('kanji'))
 
-kana_block = SkipTo(entry_number) | SkipTo(kanji_and_context_block) | \
-             SkipTo(roma_symbol)
+kana_block = SkipTo(entry_number, failOn=lineEnd) | \
+             SkipTo(kanji_and_context_block, failOn=lineEnd) | \
+             SkipTo(roma_symbol, failOn=lineEnd)
 kana_block.leaveWhitespace()
 
 romaji_block = Group(nestedExpr(opener=u'(', closer=u')', 
@@ -84,35 +85,61 @@ example_sentence = Optional(oneOf(u'▲ ・ ◧ ◨')) + expression('expression'
                    Literal(u'　') + sentence_meaning('meaning')
 example_sentence.leaveWhitespace()
 
-phrase_expression = SkipTo(u'　') | SkipTo(lineEnd)
+phrase_expression = SkipTo(u'　', failOn=lineEnd) | SkipTo(lineEnd)
 example_phrase = Optional(oneOf(u'▲ ・ ◧ ◨')) + \
                  phrase_expression('expression') + Optional(Suppress(u'　') + \
                  SkipTo(lineEnd)('meaning'))
 
 numbered_meaning_header = Word(nums)('dict_meaning_number') + \
                           SkipTo(lineEnd)('dict_meaning')
-usage_example = ~numbered_meaning_header + (example_sentence | example_phrase)
+not_usage_example = ~(numbered_meaning_header | entry_header)
+usage_example = not_usage_example + (example_sentence | example_phrase)
 numbered_meaning_block = Group(numbered_meaning_header)('meaning_header') + \
                          Suppress(lineEnd) + ZeroOrMore(Group(usage_example) + 
-                                              Suppress(lineEnd))('examples')
+                                              Suppress(lineEnd))('usage_examples')
 unnumbered_meaning_header = SkipTo(lineEnd)('dict_meaning')
 unnumbered_meaning_block = Group(unnumbered_meaning_header)('meaning_header') + \
                          Suppress(lineEnd) + ZeroOrMore(Group(usage_example) + 
-                                              Suppress(lineEnd))('examples')
+                                              Suppress(lineEnd))('usage_examples')
 
 entry_body = OneOrMore(Group(numbered_meaning_block))('numbered') | Group(unnumbered_meaning_block)('unnumbered')
 
+entry_block = Group(entry_header)('entry_header') + Suppress(lineEnd) + Group(entry_body)('entry_body')
+
+def print_entry(parsed_entry):
+    out = dict()
+    out['entry_header'] = parsed_entry['entry_header'].asDict()
+    if 'numbered' in parsed_entry['entry_body']:
+        meanings = parsed_entry['entry_body']['numbered']
+    elif 'unnumbered' in parsed_entry['entry_body']:
+        meanings = [parsed_entry['entry_body']['unnumbered']]
+
+    mlist = list()
+    for m in meanings:
+        ues = list()
+        for ue in m['usage_examples']:
+            ues.append(ue.asDict())
+        mlist.append({'meaning_header':m['meaning_header'].asDict(),
+                      'usage_examples':ues})
+    out['meanings'] = mlist
+        # print meanings[0].dump()
+        # print parsed_entry['entry_body'].dump()
+    print json.dumps(out, 
+        sort_keys=True, indent=4, ensure_ascii=False)
+    # print json.dumps(parsed_entry['entry_body'].asDict(), 
+    #     sort_keys=True, indent=4, ensure_ascii=False)
+
 # tmp = u'▲ああいうふうに　(in) that way; like that; so.'
 # tmp = u'1 〔問いに答えて〕'
-tmp = dedent(u"""\
-    1 〔問いに答えて〕
-    ・「眠くないか」「ああ, 眠くない」　"Aren't you sleepy?"―"No, I'm not."
-    ▲でかした(ぞ)!　Well done! ｜ Bravo! ｜ Wonderful! ｜ Good for you!
-    アーチ橋　an arch bridge.
-    ▲ああいうふうに　(in) that way; like that; so.
-    2 〔気軽な肯定・承諾〕
-    ▲「これ借りていいですか」「ああ, いいよ」　"Can I borrow this?"―"Yes, all right [《口》 Yeah, OK]."
-    """)
+# tmp = dedent(u"""\
+#     1 〔問いに答えて〕
+#     ・「眠くないか」「ああ, 眠くない」　"Aren't you sleepy?"―"No, I'm not."
+#     ▲でかした(ぞ)!　Well done! ｜ Bravo! ｜ Wonderful! ｜ Good for you!
+#     アーチ橋　an arch bridge.
+#     ▲ああいうふうに　(in) that way; like that; so.
+#     2 〔気軽な肯定・承諾〕
+#     ▲「これ借りていいですか」「ああ, いいよ」　"Can I borrow this?"―"Yes, all right [《口》 Yeah, OK]."
+#     """)
 # tmp = dedent(u"""\
 #     that sort of 《person》; 《a man》 like that; such 《people》.
 #     ・「眠くないか」「ああ, 眠くない」　"Aren't you sleepy?"―"No, I'm not."
@@ -120,14 +147,36 @@ tmp = dedent(u"""\
 #     アーチ橋　an arch bridge.
 #     ▲ああいうふうに　(in) that way; like that; so.
 #     """)
+tmp = dedent(u"""\
+    ああ１ ﾛｰﾏ(aa)
+    1 〔問いに答えて〕
+    ▲「お父さん, あれなあに」「ああ, あれは灯台だよ」　"What is that, Daddy?"―"Oh, it is a lighthouse."
+    2 〔気軽な肯定・承諾〕
+    ▲「これ借りていいですか」「ああ, いいよ」　"Can I borrow this?"―"Yes, all right [《口》 Yeah, OK]."
+    ・「眠くないか」「ああ, 眠くない」　"Aren't you sleepy?"―"No, I'm not."
+    ああいう ﾛｰﾏ(aaiu)
+    that sort of 《person》; 《a man》 like that; such 《people》.
+    ▲ああいうふうに　(in) that way; like that; so.
+    """)
+# tmp = dedent(u"""\
+#     ああいう ﾛｰﾏ(aaiu)
+#     that sort of 《person》; 《a man》 like that; such 《people》.
+#     ▲ああいうふうに　(in) that way; like that; so.""")
 # d = unnumbered_meaning_block.parseString(tmp)
 # pp.pprint(d['examples'][3].dump())
 
 # d = entry_body.parseString(tmp).dump()
 # pp.pprint(d)
 
-d = entry_body.parseString(tmp)
-pp.pprint(d['numbered'][1]['examples'][0].dump())
+# d = entry_body.parseString(tmp)
+# pp.pprint(d['numbered'][1]['examples'][0].dump())
+
+# d = entry_block.parseString(tmp)
+# pp.pprint(d['entry_body']['numbered'][1]['examples'][1].dump())
+
+d = entry_block.parseString(tmp)
+# pp.pprint(d.dump())
+print_entry(d)
 
 test_entries = dedent(u"""\
     ああ１ ﾛｰﾏ(aa)
