@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import codecs
 import json
 import pprint
 from pyparsing import *
@@ -87,8 +88,8 @@ example_sentence.leaveWhitespace()
 
 phrase_expression = SkipTo(u'　', failOn=lineEnd) | SkipTo(lineEnd)
 example_phrase = Optional(oneOf(u'▲ ・ ◧ ◨')) + \
-                 phrase_expression('expression') + Optional(Suppress(u'　') + \
-                 SkipTo(lineEnd)('meaning'))
+                 phrase_expression('expression') + ((Suppress(u'　') + \
+                 SkipTo(lineEnd)('meaning')) | SkipTo(lineEnd))
 
 numbered_meaning_header = Word(nums)('dict_meaning_number') + \
                           SkipTo(lineEnd)('dict_meaning')
@@ -109,6 +110,9 @@ entry_block = Group(entry_header)('entry_header') + Suppress(lineEnd) + Group(en
 def print_entry(parsed_entry):
     out = dict()
     out['entry_header'] = parsed_entry['entry_header'].asDict()
+    if 'kanji' in out['entry_header']:
+        k = out['entry_header']['kanji']
+        out['entry_header']['kanji'] = k.asList()
     if 'numbered' in parsed_entry['entry_body']:
         meanings = parsed_entry['entry_body']['numbered']
     elif 'unnumbered' in parsed_entry['entry_body']:
@@ -117,13 +121,15 @@ def print_entry(parsed_entry):
     mlist = list()
     for m in meanings:
         ues = list()
-        for ue in m['usage_examples']:
-            ues.append(ue.asDict())
+        if 'usage_examples' in m:
+            for ue in m['usage_examples']:
+                ues.append(ue.asDict())
         mlist.append({'meaning_header':m['meaning_header'].asDict(),
                       'usage_examples':ues})
     out['meanings'] = mlist
         # print meanings[0].dump()
         # print parsed_entry['entry_body'].dump()
+    # pdb.set_trace()
     print json.dumps(out, 
         sort_keys=True, indent=4, ensure_ascii=False)
     # print json.dumps(parsed_entry['entry_body'].asDict(), 
@@ -176,13 +182,36 @@ tmp = dedent(u"""\
 # d = entry_block.parseString(tmp)
 # pp.pprint(d['entry_body']['numbered'][1]['examples'][1].dump())
 
-# d = entry_block.parseString(tmp)
-# print_entry(d)
+d = entry_block.parseString(tmp)
+print_entry(d)
+with codecs.open("kendump.txt", 'r', 'utf-8') as myfile:
+    head=[myfile.next().rstrip() for x in xrange(200)]
+tmp = '\n'.join(head)
 
+# tmp = dedent(u"""\
+#     アース ﾛｰﾏ(āsu)
+#     【電】 *ground; ″earth.
+#     〜する *ground; ″earth.
+#     ▲アースしてある　*be grounded; ″be earthed.
+#     ▲洗濯機にアースを取りつける　〔アース線をアース端子につなぐ〕 connect the ⌐*ground wire [lead] of the washing machine to the terminal; *ground [″earth] the washing machine
+#     ・感電防止のためかならずアースをしてください.　Please be sure to ⌐*ground [″earth] the equipment, to avoid the danger of electric shock.
+#     ◧アース線　*a ground wire; ″an earthed line.
+#     アース板　*a ground [″an earth] plate.
+#     """)
+e1 = 0
 for t,s,e in entry_block.scanString(tmp):
+    print (s,e)
+    if s != e1:
+        raise ValueError("Skipped something")
     print tmp[s:e]
     print_entry(t)
     print 
+    s1, e1 = s, e
+
+# print tmp
+# d = entry_block.parseString(tmp).dump()
+# pp.pprint(d)
+# print
 
 test_entries = dedent(u"""\
     ああ１ ﾛｰﾏ(aa)
@@ -259,6 +288,8 @@ test_phrases = dedent(u"""\
     IH 調理器　an ⌐induction [IH] cooktop [cooker].
     ILO 代表　a 《Japanese》 delegate to the ILO.
     ▲手枷足枷をはめられて　in ⌐fetters [chains, shackles, irons]; fettered; shackled
+    ああ言えばこう言う
+    〜する *ground; ″earth.
     """).splitlines()
 
 # for entry in test_phrases:
