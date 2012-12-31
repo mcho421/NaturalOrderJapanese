@@ -157,6 +157,8 @@ tmp = dedent(u"""\
     ああいう ﾛｰﾏ(aaiu)
     that sort of 《person》; 《a man》 like that; such 《people》.
     ▲ああいうふうに　(in) that way; like that; so.
+    アーヴィン ﾛｰﾏ(āvin)
+    Ervine, St. John (Greer) (1883-1971; アイルランドの劇作家・小説家).
     """)
 # tmp = dedent(u"""\
 #     ああいう ﾛｰﾏ(aaiu)
@@ -174,9 +176,13 @@ tmp = dedent(u"""\
 # d = entry_block.parseString(tmp)
 # pp.pprint(d['entry_body']['numbered'][1]['examples'][1].dump())
 
-d = entry_block.parseString(tmp)
-# pp.pprint(d.dump())
-print_entry(d)
+# d = entry_block.parseString(tmp)
+# print_entry(d)
+
+for t,s,e in entry_block.scanString(tmp):
+    print tmp[s:e]
+    print_entry(t)
+    print 
 
 test_entries = dedent(u"""\
     ああ１ ﾛｰﾏ(aa)
