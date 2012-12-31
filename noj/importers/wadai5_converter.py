@@ -75,24 +75,59 @@ entry_header.leaveWhitespace()
 # Parsing entry bodies
 end_punctuation = oneOf(u'. 」 ! ?')
 end_expression = end_punctuation + Literal(u'　')
-expression = SkipTo(end_expression) + end_punctuation
+expression = SkipTo(end_expression, failOn=lineEnd) + end_punctuation
 expression.leaveWhitespace()
 expression.setParseAction(join_expression)
-meaning = SkipTo(stringEnd)
-meaning.leaveWhitespace()
+sentence_meaning = SkipTo(lineEnd)
+sentence_meaning.leaveWhitespace()
 example_sentence = Optional(oneOf(u'▲ ・ ◧ ◨')) + expression('expression') + \
-                   Literal(u'　') + meaning('meaning')
+                   Literal(u'　') + sentence_meaning('meaning')
 example_sentence.leaveWhitespace()
 
-phrase_expression = SkipTo(u'　') | SkipTo(stringEnd)
+phrase_expression = SkipTo(u'　') | SkipTo(lineEnd)
 example_phrase = Optional(oneOf(u'▲ ・ ◧ ◨')) + \
                  phrase_expression('expression') + Optional(Suppress(u'　') + \
-                 SkipTo(stringEnd)('meaning'))
+                 SkipTo(lineEnd)('meaning'))
+
+numbered_meaning_header = Word(nums)('dict_meaning_number') + \
+                          SkipTo(lineEnd)('dict_meaning')
+usage_example = ~numbered_meaning_header + (example_sentence | example_phrase)
+numbered_meaning_block = Group(numbered_meaning_header)('meaning_header') + \
+                         Suppress(lineEnd) + ZeroOrMore(Group(usage_example) + 
+                                              Suppress(lineEnd))('examples')
+unnumbered_meaning_header = SkipTo(lineEnd)('dict_meaning')
+unnumbered_meaning_block = Group(unnumbered_meaning_header)('meaning_header') + \
+                         Suppress(lineEnd) + ZeroOrMore(Group(usage_example) + 
+                                              Suppress(lineEnd))('examples')
+
+entry_body = OneOrMore(Group(numbered_meaning_block))('numbered') | Group(unnumbered_meaning_block)('unnumbered')
 
 # tmp = u'▲ああいうふうに　(in) that way; like that; so.'
-# tmp = u'◧アーチ形'
-# d = example_phrase.parseString(tmp).dump()
+# tmp = u'1 〔問いに答えて〕'
+tmp = dedent(u"""\
+    1 〔問いに答えて〕
+    ・「眠くないか」「ああ, 眠くない」　"Aren't you sleepy?"―"No, I'm not."
+    ▲でかした(ぞ)!　Well done! ｜ Bravo! ｜ Wonderful! ｜ Good for you!
+    アーチ橋　an arch bridge.
+    ▲ああいうふうに　(in) that way; like that; so.
+    2 〔気軽な肯定・承諾〕
+    ▲「これ借りていいですか」「ああ, いいよ」　"Can I borrow this?"―"Yes, all right [《口》 Yeah, OK]."
+    """)
+# tmp = dedent(u"""\
+#     that sort of 《person》; 《a man》 like that; such 《people》.
+#     ・「眠くないか」「ああ, 眠くない」　"Aren't you sleepy?"―"No, I'm not."
+#     ▲でかした(ぞ)!　Well done! ｜ Bravo! ｜ Wonderful! ｜ Good for you!
+#     アーチ橋　an arch bridge.
+#     ▲ああいうふうに　(in) that way; like that; so.
+#     """)
+# d = unnumbered_meaning_block.parseString(tmp)
+# pp.pprint(d['examples'][3].dump())
+
+# d = entry_body.parseString(tmp).dump()
 # pp.pprint(d)
+
+d = entry_body.parseString(tmp)
+pp.pprint(d['numbered'][1]['examples'][0].dump())
 
 test_entries = dedent(u"""\
     ああ１ ﾛｰﾏ(aa)
@@ -171,11 +206,11 @@ test_phrases = dedent(u"""\
     ▲手枷足枷をはめられて　in ⌐fetters [chains, shackles, irons]; fettered; shackled
     """).splitlines()
 
-for entry in test_phrases:
-    print entry
-    d = example_phrase.parseString(entry).dump()
-    pp.pprint(d)
-    print
+# for entry in test_phrases:
+#     print entry
+#     d = example_phrase.parseString(entry).dump()
+#     pp.pprint(d)
+#     print
 
 test_bodies = list()
 test_bodies.append(dedent("""\
