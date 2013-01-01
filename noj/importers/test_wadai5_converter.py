@@ -50,10 +50,12 @@ class TestWadai5Converter(unittest.TestCase):
             「ああ, 荒野」 ﾛｰﾏ(aa, kōya)
             あし２【蘆, 葦】 ﾛｰﾏ(ashi)
             あったか, あったかい, あったかさ, あったまる, あっためる, etc. ﾛｰﾏ(attaka, attakai, attakasa, attamaru, attameru)
+            おどらす１, おどらせる１【踊らす, 踊らせる】 ﾛｰﾏ(odorasu, odoraseru)
             """).splitlines()
 
         for entry in test_entries:
             print entry
+            entry = c.sanitize_dirty_data(entry)
             d = c.ENTRY_HEADER.parseString(entry).dump()
             c.pp.pprint(d)
             print
@@ -73,6 +75,7 @@ class TestWadai5Converter(unittest.TestCase):
 
         for entry in test_sentences:
             print entry
+            entry = c.sanitize_dirty_data(entry)
             d = c.EXAMPLE_SENTENCE.parseString(entry).dump()
             c.pp.pprint(d)
             print
@@ -96,6 +99,7 @@ class TestWadai5Converter(unittest.TestCase):
 
         for entry in test_phrases:
             print entry
+            entry = c.sanitize_dirty_data(entry)
             d = c.EXAMPLE_PHRASE.parseString(entry).dump()
             c.pp.pprint(d)
             print
@@ -122,6 +126,7 @@ class TestWadai5Converter(unittest.TestCase):
 
         for body in test_bodies:
             print body
+            body = c.sanitize_dirty_data(body)
             d = c.ENTRY_BODY.parseString(body).dump()
             c.pp.pprint(d)
             print
@@ -142,10 +147,45 @@ class TestWadai5Converter(unittest.TestCase):
                 ◧アース線　*a ground wire; ″an earthed line.
                 アース板　*a ground [″an earth] plate.
                 """),
+            dedent(u"""\
+                めいすい【名水】 ﾛｰﾏ(meisui)
+                〔飲み水〕 (a) famed mineral water; 〔河川〕 a famous river; a renowned beautiful stream.
+                ◧名水百選　〔環境省による〕 100 famed mineral waters.
+                """),
+            dedent(u"""\
+                てんし２【天使】 ﾛｰﾏ(tenshi)
+                〔キリスト教などで, 神の使い〕 an angel; a heavenly messenger; 〈集合的に〉 the celestial hierarchy; the heavenly host; 〔9 階位の天使の第 9 位〕 an angel; 〔天使のような人〕 an angel 《of a girl》.
+                ➡9 階位の天使の第 1 位から第 8 位までは次のとおり.
+                1 位: 熾(し)天使 a seraph 《pl. 〜s, -phim》　2 位: 智天使 a cherub 《pl. 〜s, -bim》　3 位: 座(ざ)天使 a throne　4 位: 主天使 a domination, a dominion　5 位: 力(りき)天使 a virtue　6 位: 能(のう)天使 a power　7 位: 権(げん)天使 a principality, a princedom　8 位: 大天使, 天使長 an archangel.
+                ▲白衣の天使　a white angel; an angel dressed in white
+                ▲天使の　angelic; seraphic; cherubic; cherublike
+                ・天使のような　angelic 《smile》; seraphic
+                ・天使のような女性　an angel of a woman
+                ・天使のような子供の寝顔　the angelic face of a sleeping child
+                ・天使の一群　a flight of angels; the host of heaven
+                ・天使の階位　the celestial hierarchy; the angelic order
+                ・天使の翼　angel(s') wings; angelic wings.
+                ◨守護天使　a guardian angel.
+                堕天使　a fallen angel; Lucifer.
+                """),
+            dedent(u"""\
+                どう７ ﾛｰﾏ(dō)
+                [⇒<LINK>どういう</LINK[142356:1388]>, <LINK>どうか</LINK[142390:772]>, <LINK>どうした</LINK[142550:1268]>, <LINK>どうして</LINK[142556:554]>, <LINK>どうでも</LINK[142684:1470]>, <LINK>どうにか</LINK[142712:126]>, <LINK>どうにも(こうにも)</LINK[142717:1050]>, <LINK>どうのこうの</LINK[142730:38]>, <LINK>どうみても</LINK[142789:1684]>, <LINK>どうやら</LINK[142811:1736]>, etc.]
+                1 〔状態や意見をたずねる〕 how; what.
+                ▲〔あいさつで〕 どう, 調子は.　How are things [How's life] with you? ｜ How's ⌐things [everything]?
+                ・商売はどうですか.　How's your business? ｜ How is your business doing?
+                ・〔病人に〕 今日はどうですか.　How ⌐do you feel [are you] today?
+                ・京都はどうだった?　How were things in Kyoto? ｜ How did you like Kyoto?
+                ・その小説はどうでしたか.　How did you find the novel? ｜ What did you think of the novel?
+                ・君はあの男をどう思う.　What do you ⌐think [make] of him?
+                2 〔勧める・誘う・提案する〕 how about.
+                ▲コーヒーでもどう.　Will you have a (cup of) coffee?
+                """),
         ]
 
         for entry in test_entries:
             print entry
+            entry = c.sanitize_dirty_data(entry)
             d = c.ENTRY_BLOCK.parseString(entry).dump()
             c.pp.pprint(d)
             print
@@ -174,10 +214,50 @@ class TestWadai5Converter(unittest.TestCase):
                 ▲愛想よく　pleasantly; in a friendly way; affably; amiably; 〔店員などが〕 helpfully
                 ・愛想よくする　try to be ⌐friendly [helpful, amiable, affable] to [toward] sb; make oneself ⌐agreeable [pleasant] to [toward] sb
                 """),
+            dedent(u"""\
+                あんぽ【安保】 ﾛｰﾏ(anpo)
+                ＝<LINK>あんぜんほしょう</LINK[110208:562]>.
+                ▲安保反対!　〔デモ隊のシュプレヒコール〕 Down with the Security Pact!
+                ◨食糧安保　the guaranteed security of foodstuffs.
+                70 年安保(闘争)　the demonstrations against the renewal of the Japan-US Security Treaty in 1970.
+                ◧安保改定　revision of the (Japan-US) Security Treaty.
+                安保堅持　the firm maintenance of the (Japan-US) Security Treaty.
+                アンホイ【安徽】 ﾛｰﾏ(anhoi)
+                ＝<LINK>あんき３</LINK[110149:88]>.
+                """),
+            dedent(u"""\
+                いいき１【好い気】 ﾛｰﾏ(iiki)
+                〜な 1 〔ひとりよがりな〕 complacent; self-satisfied; self-assured.
+                ▲自分ひとりの力で成功したと思っているんだからいい気なものさ.　How conceited! The way he acts you'd think he'd done it all by himself.
+                ・われわれの気遣いも知らないでいい気なものだ.　He is so wrapped up in himself that he's totally unaware of what we've done for him.
+                2 〔得意〕
+                ▲いい気になる　be ⌐vain [self-conceited, self-complacent, stuck-up]; be puffed up 《by [with]…》; puff oneself up 《with…》
+                ああいう ﾛｰﾏ(aaiu)
+                that sort of 《person》; 《a man》 like that; such 《people》.
+                """),
+            dedent(u"""\
+                うきふね【浮舟】 ﾛｰﾏ(ukifune)
+                relief; embossed carving.
+                ▲浮き彫りの　＝<LINK>〜にした</LINK[113004:190]>
+                2 〔際立たせる〕 throw sth into relief.
+                ▲今回の騒動でその党内の不和が図らずも浮き彫りにされた.　In the latest upheaval, the political party's internal discord was inadvertently exposed.
+                ああいう ﾛｰﾏ(aaiu)
+                that sort of 《person》; 《a man》 like that; such 《people》.
+                """),
+            dedent(u"""\
+                うきふね【浮舟】 ﾛｰﾏ(ukifune)
+                relief; embossed carving.
+                ▲浮き彫りの　＝<LINK>〜にした</LINK[113004:190]>
+                2 〔際立たせる〕 throw sth into relief.
+                ▲今回の騒動でその党内の不和が図らずも浮き彫りにされた.　In the latest upheaval, the political party's internal discord was inadvertently exposed.
+                ああいう ﾛｰﾏ(aaiu)
+                that sort of 《person》; 《a man》 like that; such 《people》.
+                """),
         ]
 
         for multi_entry in test_multi_entries:
             e1 = 0
+            multi_entry = c.sanitize_dirty_data(multi_entry)
             for t,s,e in c.ENTRY_BLOCK.scanString(multi_entry):
                 print (s,e)
                 if s != e1:
