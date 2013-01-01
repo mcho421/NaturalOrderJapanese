@@ -18,7 +18,6 @@ class UniPrinter(pprint.PrettyPrinter):
                 replace('\\\\u', '\\u'), 'unicode-escape')
         else:
             unesc = unicode(str(self.pformat(object)), 'unicode-escape')
-        # unesc = unicode(str(self.pformat(object)), 'unicode-escape')
         print unesc
 
 pp = UniPrinter(indent=4)
@@ -46,73 +45,77 @@ def join_expression(t):
     return ''.join(t)
 
 # Parsing entry headers
-entry_number = Word(u'０１２３４５６７８９')
-entry_number.setParseAction(entry_number_to_int)
+WIDE_NUMBER = Word(u'０１２３４５６７８９')
+WIDE_NUMBER.setParseAction(entry_number_to_int)
 
-roma_symbol = Literal(u' ﾛｰﾏ').leaveWhitespace()
-kanji_block = nestedExpr(opener=u'【', closer=u'】')
-kanji_block.setParseAction(split_kanji)
+ROMA_SYMBOL = Literal(u' ﾛｰﾏ').leaveWhitespace()
+KANJI_BLOCK = nestedExpr(opener=u'【', closer=u'】')
+KANJI_BLOCK.setParseAction(split_kanji)
 
-context_block = Suppress(u' 【') + SkipTo(u'】') + Suppress(u'】')
-context_block.leaveWhitespace()
-context_block.setParseAction(lambda t : t[0])
+CONTEXT_BLOCK = Suppress(u' 【') + SkipTo(u'】') + Suppress(u'】')
+CONTEXT_BLOCK.leaveWhitespace()
+CONTEXT_BLOCK.setParseAction(lambda t : t[0])
 
-kanji_and_context_block = OneOrMore(context_block('context') | 
-                          kanji_block('kanji'))
+KANJI_AND_CONTEXT_BLOCK = OneOrMore(CONTEXT_BLOCK('context') | 
+                          KANJI_BLOCK('kanji'))
 
-kana_block = SkipTo(entry_number, failOn=lineEnd) | \
-             SkipTo(kanji_and_context_block, failOn=lineEnd) | \
-             SkipTo(roma_symbol, failOn=lineEnd)
-kana_block.leaveWhitespace()
+KANA_BLOCK = SkipTo(WIDE_NUMBER, failOn=lineEnd) | \
+             SkipTo(KANJI_AND_CONTEXT_BLOCK, failOn=lineEnd) | \
+             SkipTo(ROMA_SYMBOL, failOn=lineEnd)
+KANA_BLOCK.leaveWhitespace()
 
-romaji_block = Group(nestedExpr(opener=u'(', closer=u')', 
+ROMAJI_BLOCK = Group(nestedExpr(opener=u'(', closer=u')', 
                                 content=CharsNotIn(u'()')))
-romaji_block.setParseAction(join_romaji)
+ROMAJI_BLOCK.setParseAction(join_romaji)
 
-entry_header = kana_block('kana') + Optional(entry_number)('number') + \
-    Optional(kanji_and_context_block) + Optional(context_block)('context') + \
-    Suppress(roma_symbol) + romaji_block('romaji')
-entry_header.leaveWhitespace()
+ENTRY_HEADER = KANA_BLOCK('kana') + Optional(WIDE_NUMBER)('number') + \
+    Optional(KANA_BLOCK) + Optional(KANJI_AND_CONTEXT_BLOCK) + \
+    Optional(CONTEXT_BLOCK)('context') + Suppress(ROMA_SYMBOL) + \
+    ROMAJI_BLOCK('romaji')
+ENTRY_HEADER.leaveWhitespace()
 
 # Parsing entry bodies
-end_punctuation = oneOf(u'. 」 ! ?')
-end_expression = end_punctuation + Literal(u'　')
-expression = SkipTo(end_expression, failOn=lineEnd) + end_punctuation
-expression.leaveWhitespace()
-expression.setParseAction(join_expression)
-sentence_meaning = SkipTo(lineEnd)
-sentence_meaning.leaveWhitespace()
-example_sentence = Optional(oneOf(u'▲ ・ ◧ ◨')) + expression('expression') + \
-                   Literal(u'　') + sentence_meaning('meaning')
-example_sentence.leaveWhitespace()
+END_PUNCTUATION = oneOf(u'. 」 ! ?')
+END_EXPRESSION = END_PUNCTUATION + Literal(u'　')
+EXPRESSION = SkipTo(END_EXPRESSION, failOn=lineEnd) + END_PUNCTUATION
+EXPRESSION.leaveWhitespace()
+EXPRESSION.setParseAction(join_expression)
+SENTENCE_MEANING = SkipTo(lineEnd)
+SENTENCE_MEANING.leaveWhitespace()
+EXAMPLE_SENTENCE = Optional(oneOf(u'▲ ・ ◧ ◨')) + EXPRESSION('expression') + \
+                   Literal(u'　') + SENTENCE_MEANING('meaning')
+EXAMPLE_SENTENCE.leaveWhitespace()
 
-phrase_expression = SkipTo(u'　', failOn=lineEnd) | SkipTo(lineEnd)
-example_phrase = Optional(oneOf(u'▲ ・ ◧ ◨')) + \
-                 phrase_expression('expression') + ((Suppress(u'　') + \
+PHRASE_EXPRESSION = SkipTo(u'　', failOn=lineEnd) | SkipTo(lineEnd)
+EXAMPLE_PHRASE = Optional(oneOf(u'▲ ・ ◧ ◨')) + \
+                 PHRASE_EXPRESSION('expression') + ((Suppress(u'　') + \
                  SkipTo(lineEnd)('meaning')) | SkipTo(lineEnd))
 
-numbered_meaning_header = Word(nums)('dict_meaning_number') + \
+NUMBERED_MEANING_HEADER = Word(nums)('dict_meaning_number') + \
                           SkipTo(lineEnd)('dict_meaning')
-not_usage_example = ~(numbered_meaning_header | entry_header)
-usage_example = not_usage_example + (example_sentence | example_phrase)
-numbered_meaning_block = Group(numbered_meaning_header)('meaning_header') + \
-                         Suppress(lineEnd) + ZeroOrMore(Group(usage_example) + 
+NOT_USAGE_EXAMPLE = ~(NUMBERED_MEANING_HEADER | ENTRY_HEADER)
+USAGE_EXAMPLE = NOT_USAGE_EXAMPLE + (Group(EXAMPLE_SENTENCE)('sentence') | 
+                                     Group(EXAMPLE_PHRASE)('phrase'))
+NUMBERED_MEANING_BLOCK = Group(NUMBERED_MEANING_HEADER)('meaning_header') + \
+                         Suppress(lineEnd) + ZeroOrMore(Group(USAGE_EXAMPLE) + 
                                               Suppress(lineEnd))('usage_examples')
-unnumbered_meaning_header = SkipTo(lineEnd)('dict_meaning')
-unnumbered_meaning_block = Group(unnumbered_meaning_header)('meaning_header') + \
-                         Suppress(lineEnd) + ZeroOrMore(Group(usage_example) + 
+UNNUMBERED_MEANING_HEADER = SkipTo(lineEnd)('dict_meaning')
+UNNUMBERED_MEANING_BLOCK = Group(UNNUMBERED_MEANING_HEADER)('meaning_header') + \
+                         Suppress(lineEnd) + ZeroOrMore(Group(USAGE_EXAMPLE) + 
                                               Suppress(lineEnd))('usage_examples')
 
-entry_body = OneOrMore(Group(numbered_meaning_block))('numbered') | Group(unnumbered_meaning_block)('unnumbered')
+ENTRY_BODY = OneOrMore(Group(NUMBERED_MEANING_BLOCK))('numbered') | \
+             Group(UNNUMBERED_MEANING_BLOCK)('unnumbered')
 
-entry_block = Group(entry_header)('entry_header') + Suppress(lineEnd) + Group(entry_body)('entry_body')
+ENTRY_BLOCK = Group(ENTRY_HEADER)('ENTRY_HEADER') + Suppress(lineEnd) + \
+              Group(ENTRY_BODY)('entry_body')
 
 def print_entry(parsed_entry):
     out = dict()
-    out['entry_header'] = parsed_entry['entry_header'].asDict()
-    if 'kanji' in out['entry_header']:
-        k = out['entry_header']['kanji']
-        out['entry_header']['kanji'] = k.asList()
+    out['header'] = parsed_entry['ENTRY_HEADER'].asDict()
+    if 'kanji' in out['header']:
+        k = out['header']['kanji']
+        out['header']['kanji'] = k.asList()
     if 'numbered' in parsed_entry['entry_body']:
         meanings = parsed_entry['entry_body']['numbered']
     elif 'unnumbered' in parsed_entry['entry_body']:
@@ -123,190 +126,31 @@ def print_entry(parsed_entry):
         ues = list()
         if 'usage_examples' in m:
             for ue in m['usage_examples']:
-                ues.append(ue.asDict())
-        mlist.append({'meaning_header':m['meaning_header'].asDict(),
-                      'usage_examples':ues})
+                ue_dict = ue.asDict()
+                for key in ue_dict:
+                    ue_dict[key] = ue_dict[key].asDict()
+                ues.append(ue_dict)
+        mlist_item = {'dict_meaning':m['meaning_header']['dict_meaning']}
+        if len(ues) > 0: mlist_item['usage_examples'] = ues
+        mlist.append(mlist_item)
     out['meanings'] = mlist
-        # print meanings[0].dump()
-        # print parsed_entry['entry_body'].dump()
-    # pdb.set_trace()
     print json.dumps(out, 
         sort_keys=True, indent=4, ensure_ascii=False)
-    # print json.dumps(parsed_entry['entry_body'].asDict(), 
-    #     sort_keys=True, indent=4, ensure_ascii=False)
 
-# tmp = u'▲ああいうふうに　(in) that way; like that; so.'
-# tmp = u'1 〔問いに答えて〕'
-# tmp = dedent(u"""\
-#     1 〔問いに答えて〕
-#     ・「眠くないか」「ああ, 眠くない」　"Aren't you sleepy?"―"No, I'm not."
-#     ▲でかした(ぞ)!　Well done! ｜ Bravo! ｜ Wonderful! ｜ Good for you!
-#     アーチ橋　an arch bridge.
-#     ▲ああいうふうに　(in) that way; like that; so.
-#     2 〔気軽な肯定・承諾〕
-#     ▲「これ借りていいですか」「ああ, いいよ」　"Can I borrow this?"―"Yes, all right [《口》 Yeah, OK]."
-#     """)
-# tmp = dedent(u"""\
-#     that sort of 《person》; 《a man》 like that; such 《people》.
-#     ・「眠くないか」「ああ, 眠くない」　"Aren't you sleepy?"―"No, I'm not."
-#     ▲でかした(ぞ)!　Well done! ｜ Bravo! ｜ Wonderful! ｜ Good for you!
-#     アーチ橋　an arch bridge.
-#     ▲ああいうふうに　(in) that way; like that; so.
-#     """)
-tmp = dedent(u"""\
-    ああ１ ﾛｰﾏ(aa)
-    1 〔問いに答えて〕
-    ▲「お父さん, あれなあに」「ああ, あれは灯台だよ」　"What is that, Daddy?"―"Oh, it is a lighthouse."
-    2 〔気軽な肯定・承諾〕
-    ▲「これ借りていいですか」「ああ, いいよ」　"Can I borrow this?"―"Yes, all right [《口》 Yeah, OK]."
-    ・「眠くないか」「ああ, 眠くない」　"Aren't you sleepy?"―"No, I'm not."
-    ああいう ﾛｰﾏ(aaiu)
-    that sort of 《person》; 《a man》 like that; such 《people》.
-    ▲ああいうふうに　(in) that way; like that; so.
-    アーヴィン ﾛｰﾏ(āvin)
-    Ervine, St. John (Greer) (1883-1971; アイルランドの劇作家・小説家).
-    """)
-# tmp = dedent(u"""\
-#     ああいう ﾛｰﾏ(aaiu)
-#     that sort of 《person》; 《a man》 like that; such 《people》.
-#     ▲ああいうふうに　(in) that way; like that; so.""")
-# d = unnumbered_meaning_block.parseString(tmp)
-# pp.pprint(d['examples'][3].dump())
+def main():
+    with codecs.open("kendump.txt", 'r', 'utf-8') as myfile:
+        head=[myfile.next().rstrip() for x in xrange(100)]
+    dump_text = '\n'.join(head)
 
-# d = entry_body.parseString(tmp).dump()
-# pp.pprint(d)
+    e1 = 0
+    for t,s,e in ENTRY_BLOCK.scanString(dump_text):
+        print (s,e)
+        if s != e1:
+            raise ValueError("Skipped something")
+        print dump_text[s:e]
+        print_entry(t)
+        print 
+        s1, e1 = s, e
 
-# d = entry_body.parseString(tmp)
-# pp.pprint(d['numbered'][1]['examples'][0].dump())
-
-# d = entry_block.parseString(tmp)
-# pp.pprint(d['entry_body']['numbered'][1]['examples'][1].dump())
-
-d = entry_block.parseString(tmp)
-print_entry(d)
-with codecs.open("kendump.txt", 'r', 'utf-8') as myfile:
-    head=[myfile.next().rstrip() for x in xrange(200)]
-tmp = '\n'.join(head)
-
-# tmp = dedent(u"""\
-#     アース ﾛｰﾏ(āsu)
-#     【電】 *ground; ″earth.
-#     〜する *ground; ″earth.
-#     ▲アースしてある　*be grounded; ″be earthed.
-#     ▲洗濯機にアースを取りつける　〔アース線をアース端子につなぐ〕 connect the ⌐*ground wire [lead] of the washing machine to the terminal; *ground [″earth] the washing machine
-#     ・感電防止のためかならずアースをしてください.　Please be sure to ⌐*ground [″earth] the equipment, to avoid the danger of electric shock.
-#     ◧アース線　*a ground wire; ″an earthed line.
-#     アース板　*a ground [″an earth] plate.
-#     """)
-e1 = 0
-for t,s,e in entry_block.scanString(tmp):
-    print (s,e)
-    if s != e1:
-        raise ValueError("Skipped something")
-    print tmp[s:e]
-    print_entry(t)
-    print 
-    s1, e1 = s, e
-
-# print tmp
-# d = entry_block.parseString(tmp).dump()
-# pp.pprint(d)
-# print
-
-test_entries = dedent(u"""\
-    ああ１ ﾛｰﾏ(aa)
-    ああ２ ﾛｰﾏ(aa)
-    ああ３ ﾛｰﾏ(aa)
-    ああいう ﾛｰﾏ(aaiu)
-    アーク【ARC】 ﾛｰﾏ(āku)
-    アークとう【アーク灯】 ﾛｰﾏ(ākutō)
-    「ああ, 荒野」 ﾛｰﾏ(aa, kōya)
-    アーサーおうでんせつ【アーサー王伝説】 ﾛｰﾏ(āsāōdensetsu)
-    「アーサー・サヴィル卿の犯罪」 ﾛｰﾏ(āsā・savirukyōnohanzai)
-    アース・カラー ﾛｰﾏ(āsu・karā)
-    アーチトップ(ギター) ﾛｰﾏ(āchitoppu(gitā))
-    アーティスティック・インプレッション ﾛｰﾏ(ātisutikku・inpuresshon)
-    アーパネット【ARPANET】 ﾛｰﾏ(āpanetto)
-    アール１【R】 ﾛｰﾏ(āru)
-    アール・アイりょうほう【RI 療法】 ﾛｰﾏ(āru・airyōhō)
-    アール・アンド・ディー【R ＆ D】 ﾛｰﾏ(āru・ando・dī)
-    アール・エス・にさんにシー【RS-232C】 ﾛｰﾏ(āru・esu・nisannishī)
-    アール・エスひょうじほう【RS 表示法】 ﾛｰﾏ(āru・esuhyōjihō)
-    アイアン(クラブ) ﾛｰﾏ(aian(kurabu))
-    アイ・オー【I/O】 ﾛｰﾏ(ai・ō)
-    あいがき(つぎ)【相欠き(継ぎ)】 ﾛｰﾏ(aigaki(tsugi))
-    アイこうか【I 効果】 ﾛｰﾏ(aikōka)
-    アイデア, アイディア ﾛｰﾏ(aidea, aidia)
-    アイ・ピー【IP】 【電算】 ﾛｰﾏ(ai・pī)
-    あいわす, あいわする【相和す, 相和する】 ﾛｰﾏ(aiwasu, aiwasuru)
-    アウター(ウエア) ﾛｰﾏ(autā(uea))
-    「赤頭巾(ちゃん)」 ﾛｰﾏ(akazukin(chan))
-    あかむし【赤虫】 【動】 ﾛｰﾏ(akamushi)
-    -あがり【-上がり】 ﾛｰﾏ(-agari)
-    あく４【開く・明く・空く】 ﾛｰﾏ(aku)
-    あく５【飽く】 ﾛｰﾏ(aku)
-    あつでん【圧電】 【電】 ﾛｰﾏ(atsuden)
-    えんしがい【遠紫外】 【物・光】 ﾛｰﾏ(enshigai)
-    ゲストノロン 【薬】 ﾛｰﾏ(gesutonoron)
-    ジアステレオ 【化】 ﾛｰﾏ(jiasutereo)
-    (-)ならない, (-)ならぬ ﾛｰﾏ((-)naranai, (-)naranu)
-    """).splitlines()
-
-# for entry in test_entries:
-#     print entry
-#     d = entry_header.parseString(entry).dump()
-#     pp.pprint(d)
-#     print
-
-test_sentences = dedent(u"""\
-    ▲「お父さん, あれなあに」「ああ, あれは灯台だよ」　"What is that, Daddy?"―"Oh, it is a lighthouse."
-    ▲「これ借りていいですか」「ああ, いいよ」　"Can I borrow this?"―"Yes, all right [《口》 Yeah, OK]."
-    ▲選手たちがアーチをくぐって入場してきた.　The athletes marched under the arch and into the stadium.
-    ▲どうしようもない虚脱感におそわれた.　I was assailed by a feeling of deep despondency. ｜ I was overwhelmed by a terrible sense of emptiness.
-    ・その音で彼はぎょっとした.　The noise startled him. ｜ He started at the noise.
-    ▲近くにおいでの際は拙宅にもお立ち寄りください.　Please ⌐call on us [drop in to see us] whenever you're in town.
-    ・次の仕事の話は今手がけているのが終わってからにしてくれ.　Let me hear about the next job after I've finished with the one I'm working on now. ｜ Tell me about the next commission after I've finished with the one I'm on now.
-    ▲お出かけですか.　Are you going ⌐somewhere [out]? ｜ You are ⌐leaving [heading off somewhere], are you?
-    ▲でかした(ぞ)!　Well done! ｜ Bravo! ｜ Wonderful! ｜ Good for you!
-    """).splitlines()
-
-# for entry in test_sentences:
-#     print entry
-#     d = example_sentence.parseString(entry).dump()
-#     pp.pprint(d)
-#     print
-
-test_phrases = dedent(u"""\
-    ▲ああいうふうに　(in) that way; like that; so.
-    ▲アーチをかける　hit [swat, loft] a home run.
-    ◨馬蹄形アーチ　【建】 a horseshoe arch.
-    ◧アーチ形
-    ▲アーチ形の　《an entrance》 in the ⌐shape [form] of an arch; arch-shaped 《windows》; 【植】 fornicate 《leaves》.
-    アーチ橋　an arch bridge.
-    アーチ・ダム　an arch(ed) dam.
-    ◧IH 炊飯器　an ⌐induction [IH] rice cooker.
-    IH 調理器　an ⌐induction [IH] cooktop [cooker].
-    ILO 代表　a 《Japanese》 delegate to the ILO.
-    ▲手枷足枷をはめられて　in ⌐fetters [chains, shackles, irons]; fettered; shackled
-    ああ言えばこう言う
-    〜する *ground; ″earth.
-    """).splitlines()
-
-# for entry in test_phrases:
-#     print entry
-#     d = example_phrase.parseString(entry).dump()
-#     pp.pprint(d)
-#     print
-
-test_bodies = list()
-test_bodies.append(dedent("""\
-    ああ１ ﾛｰﾏ(aa)
-    1 〔問いに答えて〕
-    ▲「お父さん, あれなあに」「ああ, あれは灯台だよ」　"What is that, Daddy?"―"Oh, it is a lighthouse."
-    2 〔気軽な肯定・承諾〕
-    ▲「これ借りていいですか」「ああ, いいよ」　"Can I borrow this?"―"Yes, all right [《口》 Yeah, OK]."
-    ・「眠くないか」「ああ, 眠くない」　"Aren't you sleepy?"―"No, I'm not."
-    """))
-
-# for body in test_bodies:
-#     print body
+if __name__ == '__main__':
+    main()
