@@ -4,6 +4,7 @@
 import codecs
 import json
 import pprint
+import re
 from pyparsing import *
 from textwrap import dedent
 import pdb
@@ -72,6 +73,7 @@ ROMAJI_BLOCK = Group(nestedExpr(opener=u'(', closer=u')',
                                 content=CharsNotIn(u'()')))
 ROMAJI_BLOCK.setParseAction(join_romaji)
 
+ENTRY_HEADER_MATCHER = re.compile(ur' ﾛｰﾏ')
 ENTRY_HEADER = KANA_BLOCK('kana') + Optional(WIDE_NUMBER)('number') + \
     Optional(KANA_BLOCK + Optional(WIDE_NUMBER)) + Optional(KANJI_AND_CONTEXT_BLOCK) + \
     Optional(CONTEXT_BLOCK)('context') + Suppress(ROMA_SYMBOL) + \
@@ -95,25 +97,33 @@ EXAMPLE_PHRASE = Optional(oneOf(u'▲ ・ ◧ ◨')) + \
                  PHRASE_EXPRESSION('expression') + ((Suppress(u'　') + \
                  SkipTo(lineEnd)('meaning')) | SkipTo(lineEnd))
 
+NUMBERED_MEANING_MATCHER = re.compile(r'(\d+) ') # move to top later
 NUMBERED_MEANING_HEADER = Optional(Literal(u'〜') + CharsNotIn(u' ') + 
                           Suppress(u' ')) + Word(nums)('dict_meaning_number') + \
-                          SkipTo(lineEnd)('dict_meaning')
+                          Suppress(u' ') + SkipTo(lineEnd)('dict_meaning')
 NUMBERED_MEANING_HEADER.leaveWhitespace()
-NOT_USAGE_EXAMPLE = ~(NUMBERED_MEANING_HEADER | ENTRY_HEADER)
-USAGE_EXAMPLE = NOT_USAGE_EXAMPLE + (Group(EXAMPLE_SENTENCE)('sentence') | 
-                                     Group(EXAMPLE_PHRASE)('phrase'))
+NOT_USAGE_EXAMPLE = (NUMBERED_MEANING_HEADER | ENTRY_HEADER)
+USAGE_EXAMPLE = (Group(EXAMPLE_SENTENCE)('sentence') | 
+                 Group(EXAMPLE_PHRASE)('phrase'))
+USAGE_EXAMPLE_IN_BLOCK = ~NOT_USAGE_EXAMPLE + Group(USAGE_EXAMPLE)
+
 NUMBERED_MEANING_BLOCK = Group(NUMBERED_MEANING_HEADER)('meaning_header') + \
-                         Suppress(lineEnd) + ZeroOrMore(Group(USAGE_EXAMPLE) + 
-                                              Suppress(lineEnd))('usage_examples')
+                         Suppress(lineEnd) + \
+                         ZeroOrMore(USAGE_EXAMPLE_IN_BLOCK +
+                                    Suppress(lineEnd))('usage_examples')
 UNNUMBERED_MEANING_HEADER = SkipTo(lineEnd)('dict_meaning')
 UNNUMBERED_MEANING_BLOCK = Group(UNNUMBERED_MEANING_HEADER)('meaning_header') + \
-                         Suppress(lineEnd) + ZeroOrMore(Group(USAGE_EXAMPLE) + 
-                                              Suppress(lineEnd))('usage_examples')
+                           Suppress(lineEnd) + \
+                           ZeroOrMore(USAGE_EXAMPLE_IN_BLOCK +
+                                      Suppress(lineEnd))('usage_examples')
 SURPRISE_ENTRY_BODY_NUMBERED = Group(UNNUMBERED_MEANING_BLOCK) + \
                                OneOrMore(Group(NUMBERED_MEANING_BLOCK))
 SURPRISE_ENTRY_BODY_NUMBERED.setParseAction(check_surprise_entry_body_numbered)
 
-ENTRY_BODY = OneOrMore(Group(NUMBERED_MEANING_BLOCK))('numbered') | \
+LINK_LINE = oneOf(u'[⇒ ＝ ⇒') + Literal(u'<LINK>') + SkipTo(lineEnd)
+
+ENTRY_BODY = Optional(LINK_LINE) + lineEnd + \
+             OneOrMore(Group(NUMBERED_MEANING_BLOCK))('numbered') | \
              SURPRISE_ENTRY_BODY_NUMBERED('numbered') | \
              Group(UNNUMBERED_MEANING_BLOCK)('unnumbered')
 
@@ -197,6 +207,8 @@ CHEAP_HACKS = [
     (u'5 年契約　《sign》', u'・5 年契約　《sign》'),
     (u'6 連発拳銃　a six-chambered', u'・6 連発拳銃　a six-chambered'),
     (u'5 分利付き公債　five-percent', u'・5 分利付き公債　five-percent'),
+    (u'3D ゴーグル　〔三次元映像用の〕', u'・3D ゴーグル　〔三次元映像用の〕'),
+    (u'⇒<LINK>-こととて</LINK[127009:800]>, <LINK>-ことなく, -ことなしに</LINK[127011:238]>, <LINK>-ことに(は)</LINK[127018:958]>, <LINK>-ことにする</LINK[127021:338]>, <LINK>-ことになる</LINK[127022:1130]>, <LINK>-ことやら</LINK[127072:136]>, <LINK>-のことだ(から)</LINK[146370:226]>, <LINK>-ことだし</LINK[127003:1158]>, <LINK>-ほどのこと</LINK[153254:256]>, <LINK>こととする</LINK[127008:852]>, <LINK>こともなげに</LINK[127068:890]>.\n', u''),
 ]
 
 def format_entry(parsed_entry):
@@ -264,6 +276,56 @@ def sanitize_dirty_data(text):
         text = text.replace(find, replace)
     return text
 
+def fix_numbered_meanings(entry_text):
+    uses_numbered_meanings = False
+    lines = entry_text.split('\n')
+    potential_numbered_meanings = list()
+    for i in xrange(1, len(lines)):
+        m = NUMBERED_MEANING_MATCHER.match(lines[i])
+        if m:
+            number_lino_tuple = (int(m.group(0)), i)
+            potential_numbered_meanings.append(number_lino_tuple)
+
+    if potential_numbered_meanings:
+        f_number = potential_numbered_meanings[0][0]
+        f_number_lino = potential_numbered_meanings[0][1]
+        has_link_line = LINK_LINE.searchString(lines[1])
+        potential_start_linos = [1]
+        if has_link_line: potential_start_linos.append(2)
+
+        if f_number == 1 and f_number_lino in potential_start_linos:
+            uses_numbered_meanings = True
+        if f_number == 2 and f_number_lino != 1:
+            uses_numbered_meanings = True
+
+    if uses_numbered_meanings == False:
+        for num, lino in potential_numbered_meanings:
+            lines[lino] = u'・' + lines[lino]
+    else:
+        next_number = f_number
+        for num, lino in potential_numbered_meanings:
+            if num != next_number:
+                lines[lino] = u'・' + lines[lino]
+            else:
+                next_number += 1
+
+    return '\n'.join(lines)
+
+def split_into_entries(text):
+    entries = list()
+    entry_buffer = list()
+    lines = text.split('\n')
+    for line in lines:
+        is_entry_header = ENTRY_HEADER_MATCHER.search(line)
+        if is_entry_header and entry_buffer:
+            entry_lines = '\n'.join(entry_buffer)
+            entries.append(entry_lines)
+            entry_buffer = list()
+        entry_buffer.append(line)
+    entry_lines = '\n'.join(entry_buffer)
+    entries.append(entry_lines)
+    return entries
+
 
 def main():
     # dump_text = dedent(u"""\
@@ -281,6 +343,73 @@ def main():
     #     ▲彼女は入賞の喜びに胸を躍らせて表彰式に臨んだ.　Thrilled [Filled with excitement] at winning a prize, she went to the prize-giving ceremony.
     #     """)
     # dump_text = sanitize_dirty_data(dump_text)
+    # tmp = u'[⇒<LINK>ベルイマン</LINK[152273:938]>,'
+    # print LINK_LINE.parseString(tmp).dump()
+    # exit()
+
+    test_multi_entries = [
+        dedent(u"""\
+            ああいう ﾛｰﾏ(aaiu)
+            that sort of 《person》; 《a man》 like that; such 《people》.
+            ▲ああいうふうに　(in) that way; like that; so.
+            あんぽ【安保】 ﾛｰﾏ(anpo)
+            ＝<LINK>あんぜんほしょう</LINK[110208:562]>.
+            ▲安保反対!　〔デモ隊のシュプレヒコール〕 Down with the Security Pact!
+            ◨食糧安保　the guaranteed security of foodstuffs.
+            70 年安保(闘争)　the demonstrations against the renewal of the Japan-US Security Treaty in 1970.
+            ◧安保改定　revision of the (Japan-US) Security Treaty.
+            """),
+        dedent(u"""\
+            いっしゅう(かん)【一週(間)】 ﾛｰﾏ(isshū(kan))
+            a week.
+            ◧1 週 5 日制　a five-day workweek.
+            1 週労働時間数　*workweek; ″working week.
+            ディスク・ブレーキ ﾛｰﾏ(disuku・burēki)
+            〔自動車などの円板ブレーキ〕 a ⌐disc [disk] brake.
+            ◨ベンチレーテッド・ディスクブレーキ　a ⌐ventilated [vented] disc brake.
+            4 輪[前輪]ディスクブレーキ　《be equipped with》 ⌐four-wheel [front] disc brakes.
+            """),
+        dedent(u"""\
+            ゴーグル ﾛｰﾏ(gōguru)
+            〔防護めがね〕 (a pair of) goggles; (水泳用) (swimming) goggles.
+            ◨スキー・ゴーグル　snow [ski] goggles.
+            3D ゴーグル　〔三次元映像用の〕 3-D goggles.
+            ながや【長屋】 ﾛｰﾏ(nagaya)
+            *a row house; *a tenement (house); ″a terrace(d) house.
+            ▲長屋住まいをする, 長屋に住む　live in a row house.
+            2 軒長屋　a two-family house; *a duplex (house); ″a semidetached house.
+            3 軒長屋　a row house divided into three units.
+            ◧長屋造りの　built in ⌐row-house [″terrace-house] style; 〔安普請の〕 jerry-built.
+            """),
+        dedent(u"""\
+            どう７ ﾛｰﾏ(dō)
+            [⇒<LINK>どういう</LINK[142356:1388]>, <LINK>どうか</LINK[142390:772]>, <LINK>どうした</LINK[142550:1268]>, <LINK>どうして</LINK[142556:554]>, <LINK>どうでも</LINK[142684:1470]>, <LINK>どうにか</LINK[142712:126]>, <LINK>どうにも(こうにも)</LINK[142717:1050]>, <LINK>どうのこうの</LINK[142730:38]>, <LINK>どうみても</LINK[142789:1684]>, <LINK>どうやら</LINK[142811:1736]>, etc.]
+            1 〔状態や意見をたずねる〕 how; what.
+            ▲〔あいさつで〕 どう, 調子は.　How are things [How's life] with you? ｜ How's ⌐things [everything]?
+            2 〔勧める・誘う・提案する〕 how about.
+            ▲コーヒーでもどう.　Will you have a (cup of) coffee?
+            どう７ ﾛｰﾏ(dō)
+            [⇒<LINK>どういう</LINK[142356:1388]>, <LINK>どうか</LINK[142390:772]>, <LINK>どうした</LINK[142550:1268]>, <LINK>どうして</LINK[142556:554]>, <LINK>どうでも</LINK[142684:1470]>, <LINK>どうにか</LINK[142712:126]>, <LINK>どうにも(こうにも)</LINK[142717:1050]>, <LINK>どうのこうの</LINK[142730:38]>, <LINK>どうみても</LINK[142789:1684]>, <LINK>どうやら</LINK[142811:1736]>, etc.]
+            1 〔状態や意見をたずねる〕 how; what.
+            3 ▲〔あいさつで〕 どう, 調子は.　How are things [How's life] with you? ｜ How's ⌐things [everything]?
+            2 〔勧める・誘う・提案する〕 how about.
+            ▲コーヒーでもどう.　Will you have a (cup of) coffee?
+            """),
+    ]
+
+    for multi_entry in test_multi_entries:
+        print multi_entry
+        entries = split_into_entries(multi_entry)
+        for entry in entries:
+            sanitized_entry = fix_numbered_meanings(entry)
+            block = ENTRY_BLOCK + stringEnd
+            block = ENTRY_BLOCK
+            d = block.parseString(sanitized_entry)
+            # pp.pprint(d.dump())
+            print_entry(d)
+            print
+        # multi_entry = c.sanitize_dirty_data(multi_entry)
+        print
 
     # print dump_text
     # d = ENTRY_BLOCK.parseString(dump_text)
@@ -298,7 +427,7 @@ def main():
     #     s1, e1 = s, e
 
     # TODO: maybe write parse action to check whether numbered meaning is in order, or then UE
-    parse_dump_file('kendump.txt', skip_lines=185330)
+    # parse_dump_file('kendump.txt', skip_lines=202397)
     # parse_dump_file('kendump.txt')
 
 if __name__ == '__main__':

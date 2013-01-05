@@ -4,11 +4,12 @@
 import random
 import unittest
 from textwrap import dedent
+import pyparsing as p
 import wadai5_converter as c
 
 class TestWadai5Converter(unittest.TestCase):
 
-    def test_ENTRY_HEADERs(self):
+    def test_entry_headers(self):
         test_entries = dedent(u"""\
             ああ１ ﾛｰﾏ(aa)
             ああ２ ﾛｰﾏ(aa)
@@ -132,11 +133,14 @@ class TestWadai5Converter(unittest.TestCase):
             print
             
     def test_entries(self):
+        print "TESTING ENTRIES"
+
         test_entries = [
             dedent(u"""\
                 ああいう ﾛｰﾏ(aaiu)
                 that sort of 《person》; 《a man》 like that; such 《people》.
-                ▲ああいうふうに　(in) that way; like that; so."""),
+                ▲ああいうふうに　(in) that way; like that; so.
+                """),
             dedent(u"""\
                 アース ﾛｰﾏ(āsu)
                 【電】 *ground; ″earth.
@@ -152,22 +156,22 @@ class TestWadai5Converter(unittest.TestCase):
                 〔飲み水〕 (a) famed mineral water; 〔河川〕 a famous river; a renowned beautiful stream.
                 ◧名水百選　〔環境省による〕 100 famed mineral waters.
                 """),
-            dedent(u"""\
-                てんし２【天使】 ﾛｰﾏ(tenshi)
-                〔キリスト教などで, 神の使い〕 an angel; a heavenly messenger; 〈集合的に〉 the celestial hierarchy; the heavenly host; 〔9 階位の天使の第 9 位〕 an angel; 〔天使のような人〕 an angel 《of a girl》.
-                ➡9 階位の天使の第 1 位から第 8 位までは次のとおり.
-                1 位: 熾(し)天使 a seraph 《pl. 〜s, -phim》　2 位: 智天使 a cherub 《pl. 〜s, -bim》　3 位: 座(ざ)天使 a throne　4 位: 主天使 a domination, a dominion　5 位: 力(りき)天使 a virtue　6 位: 能(のう)天使 a power　7 位: 権(げん)天使 a principality, a princedom　8 位: 大天使, 天使長 an archangel.
-                ▲白衣の天使　a white angel; an angel dressed in white
-                ▲天使の　angelic; seraphic; cherubic; cherublike
-                ・天使のような　angelic 《smile》; seraphic
-                ・天使のような女性　an angel of a woman
-                ・天使のような子供の寝顔　the angelic face of a sleeping child
-                ・天使の一群　a flight of angels; the host of heaven
-                ・天使の階位　the celestial hierarchy; the angelic order
-                ・天使の翼　angel(s') wings; angelic wings.
-                ◨守護天使　a guardian angel.
-                堕天使　a fallen angel; Lucifer.
-                """),
+            # dedent(u"""\
+            #     てんし２【天使】 ﾛｰﾏ(tenshi)
+            #     〔キリスト教などで, 神の使い〕 an angel; a heavenly messenger; 〈集合的に〉 the celestial hierarchy; the heavenly host; 〔9 階位の天使の第 9 位〕 an angel; 〔天使のような人〕 an angel 《of a girl》.
+            #     ➡9 階位の天使の第 1 位から第 8 位までは次のとおり.
+            #     1 位: 熾(し)天使 a seraph 《pl. 〜s, -phim》　2 位: 智天使 a cherub 《pl. 〜s, -bim》　3 位: 座(ざ)天使 a throne　4 位: 主天使 a domination, a dominion　5 位: 力(りき)天使 a virtue　6 位: 能(のう)天使 a power　7 位: 権(げん)天使 a principality, a princedom　8 位: 大天使, 天使長 an archangel.
+            #     ▲白衣の天使　a white angel; an angel dressed in white
+            #     ▲天使の　angelic; seraphic; cherubic; cherublike
+            #     ・天使のような　angelic 《smile》; seraphic
+            #     ・天使のような女性　an angel of a woman
+            #     ・天使のような子供の寝顔　the angelic face of a sleeping child
+            #     ・天使の一群　a flight of angels; the host of heaven
+            #     ・天使の階位　the celestial hierarchy; the angelic order
+            #     ・天使の翼　angel(s') wings; angelic wings.
+            #     ◨守護天使　a guardian angel.
+            #     堕天使　a fallen angel; Lucifer.
+            #     """),
             dedent(u"""\
                 どう７ ﾛｰﾏ(dō)
                 [⇒<LINK>どういう</LINK[142356:1388]>, <LINK>どうか</LINK[142390:772]>, <LINK>どうした</LINK[142550:1268]>, <LINK>どうして</LINK[142556:554]>, <LINK>どうでも</LINK[142684:1470]>, <LINK>どうにか</LINK[142712:126]>, <LINK>どうにも(こうにも)</LINK[142717:1050]>, <LINK>どうのこうの</LINK[142730:38]>, <LINK>どうみても</LINK[142789:1684]>, <LINK>どうやら</LINK[142811:1736]>, etc.]
@@ -181,13 +185,117 @@ class TestWadai5Converter(unittest.TestCase):
                 2 〔勧める・誘う・提案する〕 how about.
                 ▲コーヒーでもどう.　Will you have a (cup of) coffee?
                 """),
+            dedent(u"""\
+                ベリマン ﾛｰﾏ(beriman)
+                [⇒<LINK>ベルイマン</LINK[152273:938]>, <LINK>バーグマン</LINK[146712:1664]>] 1 Bergman, Torbern Olof (1735-84; スウェーデンの化学者).
+                2 Berryman, John (1914-72; 米国の詩人).
+                """),
+            dedent(u"""\
+                うきだす【浮き出す】 ﾛｰﾏ(ukidasu)
+                ＝<LINK>うきでる</LINK[113001:206]>. 1 〔表面に〕 float to the surface; float up; come to the top.
+                ▲やせて静脈が浮き出した腕　arms so thin that the veins ⌐stick out [swell up].
+                ▲あまりの怒りに彼の額には血管が浮き出していた.　He got so angry that the ⌐veins [blood vessels] stood out on his forehead.
+                2 〔目立つ〕 stand out.
+                ▲ライトアップされた建物は暗闇の中で浮き出して見えた.　The brightly lit building stood out sharply in the surrounding darkness.
+                """),
+            dedent(u"""\
+                ハ ﾛｰﾏ(ha)
+                【音楽】 〔音名〕 C. [⇒<LINK>ハちょうちょう</LINK[147486:1106]>, <LINK>ハたんちょう</LINK[147461:132]>]
+                ▲中央のハ(音)　middle C.
+                """),
+            dedent(u"""\
+                どう７ ﾛｰﾏ(dō)
+                [⇒<LINK>どういう</LINK[142356:1388]>, <LINK>どうか</LINK[142390:772]>, <LINK>どうした</LINK[142550:1268]>, <LINK>どうして</LINK[142556:554]>, <LINK>どうでも</LINK[142684:1470]>, <LINK>どうにか</LINK[142712:126]>, <LINK>どうにも(こうにも)</LINK[142717:1050]>, <LINK>どうのこうの</LINK[142730:38]>, <LINK>どうみても</LINK[142789:1684]>, <LINK>どうやら</LINK[142811:1736]>, etc.]
+                1 〔状態や意見をたずねる〕 how; what.
+                ▲〔あいさつで〕 どう, 調子は.　How are things [How's life] with you? ｜ How's ⌐things [everything]?
+                2 〔勧める・誘う・提案する〕 how about.
+                ▲コーヒーでもどう.　Will you have a (cup of) coffee?
+                """),
+            dedent(u"""\
+                まがる【曲がる】 ﾛｰﾏ(magaru)
+                ⇒<LINK>まがった</LINK[153695:1640]>.
+                1 〔形が変わる〕 (弓状に) bend; arc; (くの字に) bend; make a 90-degree turn; 【解】 〔関節が動く〕 flex; 〔方向が変わる〕 turn; make a turn.
+                ・ボールは大きく曲がってゴールを割った.　〔サッカーで〕 The ball made a big arc and made its way into the goal.
+                2 〔道を折れる〕 make a ⌐bend [turn]; 〔カーブに沿う〕 turn; round.
+                ▲左に曲がる　turn [strike] to the left (hand); turn left; take a left-hand turn 《on a road》
+                """),
+            dedent(u"""\
+                ごーごー ﾛｰﾏ(gōgō)
+                ＝<LINK>ごうごう２</LINK[125381:1794]>.
+                ▲風が松林の中をごーごーと吹きわたった.　The wind roared ⌐among [through] the pine trees.
+                ・列車が鉄橋をごーごーと渡っている.　The train is roaring across the bridge. ｜ There's a train roaring across the bridge.
+                """),
+            dedent(u"""\
+                -みたい ﾛｰﾏ(-mitai)
+                ＝<LINK>-よう２</LINK[157508:906]>.
+                1 〔同じようだ〕 just like….
+                ▲ライオンみたいな猫　a cat that's just like a lion.
+                2 〔一例〕 like….
+                ▲旅行はハワイみたいな所がいい.　For a vacation, a place like Hawaii would be good.
+                """),
+            dedent(u"""\
+                あんぽ【安保】 ﾛｰﾏ(anpo)
+                ＝<LINK>あんぜんほしょう</LINK[110208:562]>.
+                ▲安保反対!　〔デモ隊のシュプレヒコール〕 Down with the Security Pact!
+                ◨食糧安保　the guaranteed security of foodstuffs.
+                70 年安保(闘争)　the demonstrations against the renewal of the Japan-US Security Treaty in 1970.
+                ◧安保改定　revision of the (Japan-US) Security Treaty.
+                """),
+            dedent(u"""\
+                いっしゅう(かん)【一週(間)】 ﾛｰﾏ(isshū(kan))
+                a week.
+                ◧1 週 5 日制　a five-day workweek.
+                1 週労働時間数　*workweek; ″working week.
+                """),
+            dedent(u"""\
+                ディスク・ブレーキ ﾛｰﾏ(disuku・burēki)
+                〔自動車などの円板ブレーキ〕 a ⌐disc [disk] brake.
+                ◨ベンチレーテッド・ディスクブレーキ　a ⌐ventilated [vented] disc brake.
+                4 輪[前輪]ディスクブレーキ　《be equipped with》 ⌐four-wheel [front] disc brakes.
+                """),
+            dedent(u"""\
+                ゴーグル ﾛｰﾏ(gōguru)
+                〔防護めがね〕 (a pair of) goggles; (水泳用) (swimming) goggles.
+                ◨スキー・ゴーグル　snow [ski] goggles.
+                3D ゴーグル　〔三次元映像用の〕 3-D goggles.
+                """),
+            dedent(u"""\
+                ながや【長屋】 ﾛｰﾏ(nagaya)
+                *a row house; *a tenement (house); ″a terrace(d) house.
+                ▲長屋住まいをする, 長屋に住む　live in a row house.
+                2 軒長屋　a two-family house; *a duplex (house); ″a semidetached house.
+                3 軒長屋　a row house divided into three units.
+                ◧長屋造りの　built in ⌐row-house [″terrace-house] style; 〔安普請の〕 jerry-built.
+                """),
+            dedent(u"""\
+                どう７ ﾛｰﾏ(dō)
+                [⇒<LINK>どういう</LINK[142356:1388]>, <LINK>どうか</LINK[142390:772]>, <LINK>どうした</LINK[142550:1268]>, <LINK>どうして</LINK[142556:554]>, <LINK>どうでも</LINK[142684:1470]>, <LINK>どうにか</LINK[142712:126]>, <LINK>どうにも(こうにも)</LINK[142717:1050]>, <LINK>どうのこうの</LINK[142730:38]>, <LINK>どうみても</LINK[142789:1684]>, <LINK>どうやら</LINK[142811:1736]>, etc.]
+                1 〔状態や意見をたずねる〕 how; what.
+                ▲〔あいさつで〕 どう, 調子は.　How are things [How's life] with you? ｜ How's ⌐things [everything]?
+                2 〔勧める・誘う・提案する〕 how about.
+                ▲コーヒーでもどう.　Will you have a (cup of) coffee?
+                """),
+            dedent(u"""\
+                どう７ ﾛｰﾏ(dō)
+                [⇒<LINK>どういう</LINK[142356:1388]>, <LINK>どうか</LINK[142390:772]>, <LINK>どうした</LINK[142550:1268]>, <LINK>どうして</LINK[142556:554]>, <LINK>どうでも</LINK[142684:1470]>, <LINK>どうにか</LINK[142712:126]>, <LINK>どうにも(こうにも)</LINK[142717:1050]>, <LINK>どうのこうの</LINK[142730:38]>, <LINK>どうみても</LINK[142789:1684]>, <LINK>どうやら</LINK[142811:1736]>, etc.]
+                1 〔状態や意見をたずねる〕 how; what.
+                3 ▲〔あいさつで〕 どう, 調子は.　How are things [How's life] with you? ｜ How's ⌐things [everything]?
+                2 〔勧める・誘う・提案する〕 how about.
+                ▲コーヒーでもどう.　Will you have a (cup of) coffee?
+                """),
         ]
 
         for entry in test_entries:
             print entry
-            entry = c.sanitize_dirty_data(entry)
-            d = c.ENTRY_BLOCK.parseString(entry).dump()
-            c.pp.pprint(d)
+            # entry = c.sanitize_dirty_data(entry)
+            entry = c.fix_numbered_meanings(entry)
+            block = c.ENTRY_BLOCK + p.stringEnd
+            try:
+                d = block.parseString(entry).dump()
+                c.pp.pprint(d)
+            except p.ParseException:
+                message = "Entry: \n" + entry
+                raise Exception(message)
             print
 
     def test_multi_entries(self):
@@ -252,6 +360,53 @@ class TestWadai5Converter(unittest.TestCase):
                 ▲今回の騒動でその党内の不和が図らずも浮き彫りにされた.　In the latest upheaval, the political party's internal discord was inadvertently exposed.
                 ああいう ﾛｰﾏ(aaiu)
                 that sort of 《person》; 《a man》 like that; such 《people》.
+                """),
+            dedent(u"""\
+                ああいう ﾛｰﾏ(aaiu)
+                that sort of 《person》; 《a man》 like that; such 《people》.
+                ▲ああいうふうに　(in) that way; like that; so.
+                あんぽ【安保】 ﾛｰﾏ(anpo)
+                ＝<LINK>あんぜんほしょう</LINK[110208:562]>.
+                ▲安保反対!　〔デモ隊のシュプレヒコール〕 Down with the Security Pact!
+                ◨食糧安保　the guaranteed security of foodstuffs.
+                70 年安保(闘争)　the demonstrations against the renewal of the Japan-US Security Treaty in 1970.
+                ◧安保改定　revision of the (Japan-US) Security Treaty.
+                """),
+            dedent(u"""\
+                いっしゅう(かん)【一週(間)】 ﾛｰﾏ(isshū(kan))
+                a week.
+                ◧1 週 5 日制　a five-day workweek.
+                1 週労働時間数　*workweek; ″working week.
+                ディスク・ブレーキ ﾛｰﾏ(disuku・burēki)
+                〔自動車などの円板ブレーキ〕 a ⌐disc [disk] brake.
+                ◨ベンチレーテッド・ディスクブレーキ　a ⌐ventilated [vented] disc brake.
+                4 輪[前輪]ディスクブレーキ　《be equipped with》 ⌐four-wheel [front] disc brakes.
+                """),
+            dedent(u"""\
+                ゴーグル ﾛｰﾏ(gōguru)
+                〔防護めがね〕 (a pair of) goggles; (水泳用) (swimming) goggles.
+                ◨スキー・ゴーグル　snow [ski] goggles.
+                3D ゴーグル　〔三次元映像用の〕 3-D goggles.
+                ながや【長屋】 ﾛｰﾏ(nagaya)
+                *a row house; *a tenement (house); ″a terrace(d) house.
+                ▲長屋住まいをする, 長屋に住む　live in a row house.
+                2 軒長屋　a two-family house; *a duplex (house); ″a semidetached house.
+                3 軒長屋　a row house divided into three units.
+                ◧長屋造りの　built in ⌐row-house [″terrace-house] style; 〔安普請の〕 jerry-built.
+                """),
+            dedent(u"""\
+                どう７ ﾛｰﾏ(dō)
+                [⇒<LINK>どういう</LINK[142356:1388]>, <LINK>どうか</LINK[142390:772]>, <LINK>どうした</LINK[142550:1268]>, <LINK>どうして</LINK[142556:554]>, <LINK>どうでも</LINK[142684:1470]>, <LINK>どうにか</LINK[142712:126]>, <LINK>どうにも(こうにも)</LINK[142717:1050]>, <LINK>どうのこうの</LINK[142730:38]>, <LINK>どうみても</LINK[142789:1684]>, <LINK>どうやら</LINK[142811:1736]>, etc.]
+                1 〔状態や意見をたずねる〕 how; what.
+                ▲〔あいさつで〕 どう, 調子は.　How are things [How's life] with you? ｜ How's ⌐things [everything]?
+                2 〔勧める・誘う・提案する〕 how about.
+                ▲コーヒーでもどう.　Will you have a (cup of) coffee?
+                どう７ ﾛｰﾏ(dō)
+                [⇒<LINK>どういう</LINK[142356:1388]>, <LINK>どうか</LINK[142390:772]>, <LINK>どうした</LINK[142550:1268]>, <LINK>どうして</LINK[142556:554]>, <LINK>どうでも</LINK[142684:1470]>, <LINK>どうにか</LINK[142712:126]>, <LINK>どうにも(こうにも)</LINK[142717:1050]>, <LINK>どうのこうの</LINK[142730:38]>, <LINK>どうみても</LINK[142789:1684]>, <LINK>どうやら</LINK[142811:1736]>, etc.]
+                1 〔状態や意見をたずねる〕 how; what.
+                3 ▲〔あいさつで〕 どう, 調子は.　How are things [How's life] with you? ｜ How's ⌐things [everything]?
+                2 〔勧める・誘う・提案する〕 how about.
+                ▲コーヒーでもどう.　Will you have a (cup of) coffee?
                 """),
         ]
 
