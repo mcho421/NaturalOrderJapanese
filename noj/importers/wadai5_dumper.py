@@ -112,7 +112,7 @@ def main():
                ' ', pb.Timer(), ' ']
     pbar = pb.ProgressBar(widgets=widgets, maxval=num_pos).start()
 
-    for i in dumper.dump_generator(:)
+    for i in dumper.dump_generator():
         pbar.update(i)
     pbar.finish()
 

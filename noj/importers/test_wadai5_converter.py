@@ -56,7 +56,7 @@ class TestWadai5Converter(unittest.TestCase):
 
         for entry in test_entries:
             print entry
-            entry = c.sanitize_dirty_data(entry)
+            # entry = c.sanitize_dirty_data(entry)
             d = c.ENTRY_HEADER.parseString(entry).dump()
             c.pp.pprint(d)
             print
@@ -76,7 +76,7 @@ class TestWadai5Converter(unittest.TestCase):
 
         for entry in test_sentences:
             print entry
-            entry = c.sanitize_dirty_data(entry)
+            # entry = c.sanitize_dirty_data(entry)
             d = c.EXAMPLE_SENTENCE.parseString(entry).dump()
             c.pp.pprint(d)
             print
@@ -100,37 +100,37 @@ class TestWadai5Converter(unittest.TestCase):
 
         for entry in test_phrases:
             print entry
-            entry = c.sanitize_dirty_data(entry)
+            # entry = c.sanitize_dirty_data(entry)
             d = c.EXAMPLE_PHRASE.parseString(entry).dump()
             c.pp.pprint(d)
             print
 
-    def test_bodies(self):
-        test_bodies = [
-            dedent(u"""\
-                1 〔問いに答えて〕
-                ・「眠くないか」「ああ, 眠くない」　"Aren't you sleepy?"―"No, I'm not."
-                ▲でかした(ぞ)!　Well done! ｜ Bravo! ｜ Wonderful! ｜ Good for you!
-                アーチ橋　an arch bridge.
-                ▲ああいうふうに　(in) that way; like that; so.
-                2 〔気軽な肯定・承諾〕
-                ▲「これ借りていいですか」「ああ, いいよ」　"Can I borrow this?"―"Yes, all right [《口》 Yeah, OK]."
-                """),
-            dedent(u"""\
-                that sort of 《person》; 《a man》 like that; such 《people》.
-                ・「眠くないか」「ああ, 眠くない」　"Aren't you sleepy?"―"No, I'm not."
-                ▲でかした(ぞ)!　Well done! ｜ Bravo! ｜ Wonderful! ｜ Good for you!
-                アーチ橋　an arch bridge.
-                ▲ああいうふうに　(in) that way; like that; so.
-                """),
-        ]
+    # def test_bodies(self):
+    #     test_bodies = [
+    #         dedent(u"""\
+    #             1 〔問いに答えて〕
+    #             ・「眠くないか」「ああ, 眠くない」　"Aren't you sleepy?"―"No, I'm not."
+    #             ▲でかした(ぞ)!　Well done! ｜ Bravo! ｜ Wonderful! ｜ Good for you!
+    #             アーチ橋　an arch bridge.
+    #             ▲ああいうふうに　(in) that way; like that; so.
+    #             2 〔気軽な肯定・承諾〕
+    #             ▲「これ借りていいですか」「ああ, いいよ」　"Can I borrow this?"―"Yes, all right [《口》 Yeah, OK]."
+    #             """),
+    #         dedent(u"""\
+    #             that sort of 《person》; 《a man》 like that; such 《people》.
+    #             ・「眠くないか」「ああ, 眠くない」　"Aren't you sleepy?"―"No, I'm not."
+    #             ▲でかした(ぞ)!　Well done! ｜ Bravo! ｜ Wonderful! ｜ Good for you!
+    #             アーチ橋　an arch bridge.
+    #             ▲ああいうふうに　(in) that way; like that; so.
+    #             """),
+    #     ]
 
-        for body in test_bodies:
-            print body
-            body = c.sanitize_dirty_data(body)
-            d = c.ENTRY_BODY.parseString(body).dump()
-            c.pp.pprint(d)
-            print
+    #     for body in test_bodies:
+    #         print body
+    #         body = c.sanitize_dirty_data(body)
+    #         d = c.ENTRY_BODY.parseString(body).dump()
+    #         c.pp.pprint(d)
+    #         print
             
     def test_entries(self):
         print "TESTING ENTRIES"
@@ -156,22 +156,22 @@ class TestWadai5Converter(unittest.TestCase):
                 〔飲み水〕 (a) famed mineral water; 〔河川〕 a famous river; a renowned beautiful stream.
                 ◧名水百選　〔環境省による〕 100 famed mineral waters.
                 """),
-            # dedent(u"""\
-            #     てんし２【天使】 ﾛｰﾏ(tenshi)
-            #     〔キリスト教などで, 神の使い〕 an angel; a heavenly messenger; 〈集合的に〉 the celestial hierarchy; the heavenly host; 〔9 階位の天使の第 9 位〕 an angel; 〔天使のような人〕 an angel 《of a girl》.
-            #     ➡9 階位の天使の第 1 位から第 8 位までは次のとおり.
-            #     1 位: 熾(し)天使 a seraph 《pl. 〜s, -phim》　2 位: 智天使 a cherub 《pl. 〜s, -bim》　3 位: 座(ざ)天使 a throne　4 位: 主天使 a domination, a dominion　5 位: 力(りき)天使 a virtue　6 位: 能(のう)天使 a power　7 位: 権(げん)天使 a principality, a princedom　8 位: 大天使, 天使長 an archangel.
-            #     ▲白衣の天使　a white angel; an angel dressed in white
-            #     ▲天使の　angelic; seraphic; cherubic; cherublike
-            #     ・天使のような　angelic 《smile》; seraphic
-            #     ・天使のような女性　an angel of a woman
-            #     ・天使のような子供の寝顔　the angelic face of a sleeping child
-            #     ・天使の一群　a flight of angels; the host of heaven
-            #     ・天使の階位　the celestial hierarchy; the angelic order
-            #     ・天使の翼　angel(s') wings; angelic wings.
-            #     ◨守護天使　a guardian angel.
-            #     堕天使　a fallen angel; Lucifer.
-            #     """),
+            dedent(u"""\
+                てんし２【天使】 ﾛｰﾏ(tenshi)
+                〔キリスト教などで, 神の使い〕 an angel; a heavenly messenger; 〈集合的に〉 the celestial hierarchy; the heavenly host; 〔9 階位の天使の第 9 位〕 an angel; 〔天使のような人〕 an angel 《of a girl》.
+                ➡9 階位の天使の第 1 位から第 8 位までは次のとおり.
+                1 位: 熾(し)天使 a seraph 《pl. 〜s, -phim》　2 位: 智天使 a cherub 《pl. 〜s, -bim》　3 位: 座(ざ)天使 a throne　4 位: 主天使 a domination, a dominion　5 位: 力(りき)天使 a virtue　6 位: 能(のう)天使 a power　7 位: 権(げん)天使 a principality, a princedom　8 位: 大天使, 天使長 an archangel.
+                ▲白衣の天使　a white angel; an angel dressed in white
+                ▲天使の　angelic; seraphic; cherubic; cherublike
+                ・天使のような　angelic 《smile》; seraphic
+                ・天使のような女性　an angel of a woman
+                ・天使のような子供の寝顔　the angelic face of a sleeping child
+                ・天使の一群　a flight of angels; the host of heaven
+                ・天使の階位　the celestial hierarchy; the angelic order
+                ・天使の翼　angel(s') wings; angelic wings.
+                ◨守護天使　a guardian angel.
+                堕天使　a fallen angel; Lucifer.
+                """),
             dedent(u"""\
                 どう７ ﾛｰﾏ(dō)
                 [⇒<LINK>どういう</LINK[142356:1388]>, <LINK>どうか</LINK[142390:772]>, <LINK>どうした</LINK[142550:1268]>, <LINK>どうして</LINK[142556:554]>, <LINK>どうでも</LINK[142684:1470]>, <LINK>どうにか</LINK[142712:126]>, <LINK>どうにも(こうにも)</LINK[142717:1050]>, <LINK>どうのこうの</LINK[142730:38]>, <LINK>どうみても</LINK[142789:1684]>, <LINK>どうやら</LINK[142811:1736]>, etc.]
@@ -283,19 +283,26 @@ class TestWadai5Converter(unittest.TestCase):
                 2 〔勧める・誘う・提案する〕 how about.
                 ▲コーヒーでもどう.　Will you have a (cup of) coffee?
                 """),
+            dedent(u"""\
+                おすわり【お座り】 《小児語》 ﾛｰﾏ(osuwari)
+                〜する sit down. [⇒<LINK>すわる１</LINK[134584:104]>]
+                ▲きちんとお座りして食べなさい.　Sit (up) properly and eat your food.
+                ・この人形はお座りもする抱き人形です.　This is a cuddly doll that can sit up, too.
+                ▲赤ちゃんはお座りができるようになった.　The baby ⌐has learned to [is able to, can] sit up.
+                ▲〔犬に向かって〕 お座り!　Sit!
+                """),
+            dedent(u"""\
+                タイム・スリップ ﾛｰﾏ(taimu・surippu)
+                a time ⌐slip [warp]; time travel.
+                ▲それは主人公が 50 年後の未来にタイム・スリップする映画だ.　It's a movie in which the hero travels through a time warp 50 years into the future.
+                ・江戸時代にタイム・スリップしたような気がする　feel as if one had been transported through time to the Edo period
+                ・その町を歩くと 100 年前のヨーロッパにタイム・スリップしたような気になる.　When I walk through that town I feel as though I were a time-traveler in the Europe of a hundred years ago.
+                """),
         ]
 
         for entry in test_entries:
             print entry
-            # entry = c.sanitize_dirty_data(entry)
-            entry = c.fix_numbered_meanings(entry)
-            block = c.ENTRY_BLOCK + p.stringEnd
-            try:
-                d = block.parseString(entry).dump()
-                c.pp.pprint(d)
-            except p.ParseException:
-                message = "Entry: \n" + entry
-                raise Exception(message)
+            print c.get_json(c.parse_entry(entry))
             print
 
     def test_multi_entries(self):
@@ -411,16 +418,10 @@ class TestWadai5Converter(unittest.TestCase):
         ]
 
         for multi_entry in test_multi_entries:
-            e1 = 0
-            multi_entry = c.sanitize_dirty_data(multi_entry)
-            for t,s,e in c.ENTRY_BLOCK.scanString(multi_entry):
-                print (s,e)
-                if s != e1:
-                    raise ValueError("Skipped something")
-                print multi_entry[s:e]
-                c.print_entry(t)
-                print 
-                s1, e1 = s, e
+            print multi_entry
+            parsed_entries = c.parse_multiple_entries(multi_entry)
+            print c.get_json(parsed_entries)
+            print
                 
 
 if __name__ == '__main__':
