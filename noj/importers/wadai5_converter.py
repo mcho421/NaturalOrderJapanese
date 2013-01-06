@@ -169,35 +169,6 @@ def get_json(serializable):
                       ensure_ascii=False)
 
 
-def parse_dump_file(dump_file, num_lines=None, skip_lines=None):
-    with codecs.open(dump_file, 'r', 'utf-8') as myfile:
-        if isinstance(num_lines, int):
-            head = [myfile.next().rstrip() for x in xrange(num_lines)]
-        else:
-            head = myfile.read().splitlines()
-        if isinstance(skip_lines, int):
-            head = head[skip_lines:-1]
-    dump_text = '\n'.join(head)
-    dump_text = sanitize_dirty_data(dump_text)
-
-    print len(dump_text)
-    parsed_entries = parse_multiple_entries(dump_text)
-    return get_json(parsed_entries)
-    # i = 0
-    # e1 = 0
-    # # print dump_text[2855349:2895349]
-    # for t,s,e in ENTRY_BLOCK.scanString(dump_text):
-    #     # i += 1
-    #     # if i % 100 == 0:
-    #     #     print (s,e)
-    #     print (s,e)
-    #     if s != e1:
-    #         raise ValueError("Skipped something")
-    #     print dump_text[s:e]
-    #     print_entry(t)
-    #     print 
-    #     s1, e1 = s, e
-
 def sanitize_dirty_data(text):
     for find, replace in DIRTY_DATA:
         text = text.replace(find, replace)
@@ -268,6 +239,57 @@ def parse_multiple_entries(text):
         converted_entries.append(d)
     return converted_entries
 
+def parse_dump_file(dump_file, num_lines=None, skip_lines=None):
+    with codecs.open(dump_file, 'r', 'utf-8') as myfile:
+        if isinstance(num_lines, int):
+            head = [myfile.next().rstrip() for x in xrange(num_lines)]
+        else:
+            head = myfile.read().splitlines()
+        if isinstance(skip_lines, int):
+            head = head[skip_lines:-1]
+    dump_text = '\n'.join(head)
+    dump_text = sanitize_dirty_data(dump_text)
+
+    print len(dump_text)
+    parsed_entries = parse_multiple_entries(dump_text)
+    return get_json(parsed_entries)
+
+class Wadai5Converter(object):
+    """Convert Kenkyusha 5th EPWING Dictionary dump to importable format."""
+    def __init__(self, dumpfile, outfile=None):
+        super(Wadai5Converter, self).__init__()
+        self.dumpfile = dumpfile
+        self.outfile  = outfile
+        self.entries  = None
+        self.converted_entries = None
+
+    def initialize_entries(self):
+        with codecs.open(self.dumpfile, 'r', 'utf-8') as myfile:
+            head = myfile.read().splitlines()
+        dump_text = '\n'.join(head)
+        dump_text = sanitize_dirty_data(dump_text)
+        self.entries = split_into_entries(dump_text)
+
+    def get_num_entries(self):
+        if self.entries is None:
+            self.initialize_entries()
+        return len(self.entries)
+
+    def convert_generator(self):
+        if self.entries is None:
+            self.initialize_entries()
+        self.converted_entries = list()
+        for i, entry in enumerate(self.entries):
+            # print entry
+            d = parse_entry(entry)
+            self.converted_entries.append(d)
+            yield i
+        if self.outfile is not None:
+            with codecs.open(self.outfile, 'w', 'utf-8') as myfile:
+                # myfile.write(get_json(self.converted_entries)) # Memory error
+                for c_entry in self.converted_entries:
+                    myfile.write(get_json(c_entry))
+                    myfile.write('\n\n')
 
 
 def main():
@@ -355,8 +377,21 @@ def main():
     #     s1, e1 = s, e
 
     # TODO: maybe write parse action to check whether numbered meaning is in order, or then UE
-    parse_dump_file('kendump.txt', skip_lines=336224)
+    # parse_dump_file('kendump.txt', skip_lines=336224)
     # parse_dump_file('kendump.txt')
+    # converter = Wadai5Converter('kendump_small.txt', 'kenconvert_small.txt')
+    converter = Wadai5Converter('kendump.txt', 'kenconvert.txt')
+    num_entries = converter.get_num_entries()
+
+    import progressbar as pb
+    widgets = ['Converting: ', pb.Percentage(), ' ', pb.Bar(),
+               ' ', pb.Timer(), ' ']
+    pbar = pb.ProgressBar(widgets=widgets, maxval=num_entries).start()
+
+    for i in converter.convert_generator():
+        pbar.update(i)
+    pbar.finish()
+    # print get_json(converter.converted_entries)
 
 if __name__ == '__main__':
     main()
